@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Breathe ESG</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a202c;}
+.login-bg{min-height:100vh;background:linear-gradient(135deg,#1a4731 0%,#2d6a4f 50%,#40916c 100%);display:flex;align-items:center;justify-content:center;}
+.login-card{background:white;border-radius:16px;padding:2.5rem;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;}
+.login-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#2d6a4f,#40916c);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:1.2rem;}
+.login-logo h1{color:#1a4731;font-size:1.6rem;font-weight:700;}
+.login-subtitle{color:#718096;margin-bottom:2rem;font-size:0.9rem;}
+.input-group{margin-bottom:1rem;}
+.input-group label{display:block;font-size:0.8rem;font-weight:600;color:#4a5568;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em;}
+.input-group input{width:100%;padding:0.75rem 1rem;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;transition:border-color 0.2s;}
+.input-group input:focus{outline:none;border-color:#2d6a4f;}
+.btn-primary{width:100%;padding:0.85rem;background:linear-gradient(135deg,#2d6a4f,#40916c);color:white;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.9;}
+.error-msg{background:#fff5f5;border:1px solid #feb2b2;color:#c53030;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.875rem;}
+.header{background:linear-gradient(135deg,#1a4731,#2d6a4f);color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.2);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-icon{width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.header h1{font-size:1.2rem;font-weight:700;}
+.header-subtitle{font-size:0.75rem;opacity:0.8;}
+.btn-logout{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:0.5rem 1.2rem;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:background 0.2s;}
+.btn-logout:hover{background:rgba(255,255,255,0.25);}
+.stats-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:0;background:white;border-bottom:1px solid #e2e8f0;}
+.stat-card{padding:1.2rem 1rem;text-align:center;border-right:1px solid #e2e8f0;}
+.stat-card:last-child{border-right:none;}
+.stat-number{font-size:1.6rem;font-weight:700;line-height:1;}
+.stat-label{font-size:0.7rem;color:#718096;margin-top:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
+.ingest-bar{background:white;border-bottom:1px solid #e2e8f0;padding:1rem 2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.ingest-bar strong{color:#2d6a4f;font-size:0.9rem;}
+.select-styled{padding:0.5rem 0.75rem;border:2px solid #e2e8f0;border-radius:8px;font-size:0.875rem;background:white;cursor:pointer;}
+.select-styled:focus{outline:none;border-color:#2d6a4f;}
+.file-label{display:inline-flex;align-items:center;gap:6px;padding:0.5rem 1rem;background:#f7fafc;border:2px dashed #cbd5e0;border-radius:8px;cursor:pointer;font-size:0.875rem;color:#4a5568;transition:all 0.2s;}
+.file-label:hover{border-color:#2d6a4f;color:#2d6a4f;}
+.btn-upload{padding:0.5rem 1.5rem;background:linear-gradient(135deg,#2d6a4f,#40916c);color:white;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;}
+.btn-upload:disabled{opacity:0.5;cursor:not-allowed;}
+.upload-success{color:#276749;background:#f0fff4;border:1px solid #9ae6b4;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.85rem;}
+.upload-error{color:#c53030;background:#fff5f5;border:1px solid #feb2b2;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.85rem;}
+.filters-bar{padding:1rem 2rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;}
+.filters-bar span{font-size:0.8rem;color:#718096;font-weight:600;text-transform:uppercase;}
+.table-wrap{padding:0 2rem 2rem;}
+.table-container{background:white;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,0.08);overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:#f7fafc;border-bottom:2px solid #e2e8f0;}
+th{padding:0.875rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:0.05em;}
+tbody tr{border-bottom:1px solid #f0f4f8;transition:background 0.15s;}
+tbody tr:hover{background:#f7fafc;}
+tbody tr:last-child{border-bottom:none;}
+td{padding:0.75rem 1rem;font-size:0.875rem;}
+.scope-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;color:white;}
+.s1{background:#e53e3e;}
+.s2{background:#dd6b20;}
+.s3{background:#3182ce;}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;}
+.status-PENDING{background:#fefcbf;color:#744210;}
+.status-APPROVED{background:#c6f6d5;color:#22543d;}
+.status-FLAGGED{background:#fed7d7;color:#822727;}
+.status-REJECTED{background:#e2e8f0;color:#4a5568;}
+.flag-icon{color:#e53e3e;font-weight:bold;margin-left:4px;cursor:help;}
+.action-btn{padding:4px 10px;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;}
+.action-btn:hover{opacity:0.8;}
+.btn-ok{background:#c6f6d5;color:#22543d;}
+.btn-flag{background:#fed7d7;color:#822727;}
+.btn-rej{background:#e2e8f0;color:#4a5568;}
+.empty-state{text-align:center;padding:4rem 2rem;color:#a0aec0;}
+.empty-icon{font-size:3rem;margin-bottom:1rem;}
+.empty-text{font-size:1rem;font-weight:500;}
+.empty-sub{font-size:0.85rem;margin-top:0.5rem;}
+.loading{text-align:center;padding:3rem;color:#718096;}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#2d6a4f;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.co2-big{font-size:1rem;font-weight:700;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const API = 'http://127.0.0.1:8000/api';
+const api = axios.create({ baseURL: API });
+api.interceptors.request.use(c => {
+  const t = localStorage.getItem('token');
+  if (t) c.headers.Authorization = 'Token ' + t;
+  return c;
+});
+
+function Login({ onLogin }) {
+  const [u, setU] = React.useState('');
+  const [p, setP] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const go = async () => {
+    try {
+      const r = await api.post('/auth/login/', { username: u, password: p });
+      localStorage.setItem('token', r.data.token);
+      onLogin();
+    } catch(e) { setErr('Invalid username or password'); }
+  };
+  const onKey = (e) => { if(e.key==='Enter') go(); };
+  return (
+    <div className="login-bg">
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-icon">🌿</div>
+          <h1>Breathe ESG</h1>
+        </div>
+        <p className="login-subtitle">Emissions Data Ingestion & Review Platform</p>
+        {err && <div className="error-msg">{err}</div>}
+        <div className="input-group">
+          <label>Username</label>
+          <input placeholder="Enter username" value={u} onChange={e=>setU(e.target.value)} onKeyDown={onKey}/>
+        </div>
+        <div className="input-group">
+          <label>Password</label>
+          <input type="password" placeholder="Enter password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={onKey}/>
+        </div>
+        <button className="btn-primary" onClick={go}>Sign In →</button>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard() {
+  const [stats, setStats] = React.useState({});
+  const [records, setRecords] = React.useState([]);
+  const [filters, setFilters] = React.useState({scope:'',status:'',source_type:''});
+  const [loading, setLoading] = React.useState(true);
+  const [sourceType, setSourceType] = React.useState('SAP');
+  const [file, setFile] = React.useState(null);
+  const [fileName, setFileName] = React.useState('');
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadMsg, setUploadMsg] = React.useState('');
+  const [uploadOk, setUploadOk] = React.useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if(filters.scope) params.scope = filters.scope;
+      if(filters.status) params.status = filters.status;
+      if(filters.source_type) params.source_type = filters.source_type;
+      const [s, r] = await Promise.all([api.get('/stats/'), api.get('/records/', {params})]);
+      setStats(s.data);
+      setRecords(r.data);
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  };
+
+  React.useEffect(function(){ fetchData(); }, []);
+
+  const applyFilter = (key, val) => {
+    const f = Object.assign({}, filters, {[key]: val});
+    setFilters(f);
+    setLoading(true);
+    const params = {};
+    if(f.scope) params.scope = f.scope;
+    if(f.status) params.status = f.status;
+    if(f.source_type) params.source_type = f.source_type;
+    Promise.all([api.get('/stats/'), api.get('/records/', {params})]).then(function(res){
+      setStats(res[0].data); setRecords(res[1].data); setLoading(false);
+    }).catch(function(e){ console.error(e); setLoading(false); });
+  };
+
+  const review = async (id, status) => {
+    await api.patch('/records/' + id + '/review/', { status });
+    fetchData();
+  };
+
+  const onFileChange = (e) => {
+    const f = e.target.files[0];
+    if(f){ setFile(f); setFileName(f.name); }
+  };
+
+  const upload = async () => {
+    if (!file) return;
+    setUploading(true); setUploadMsg('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await api.post('/ingest/' + sourceType + '/', fd);
+      setUploadMsg(r.data.message); setUploadOk(true);
+      fetchData();
+    } catch(e) {
+      setUploadMsg(e.response && e.response.data ? (e.response.data.error || 'Upload failed') : e.message);
+      setUploadOk(false);
+    }
+    setUploading(false);
+  };
+
+  const scopeClass = {1:'s1',2:'s2',3:'s3'};
+
+  return (
+    <div style={{minHeight:'100vh',background:'#f0f4f8'}}>
+      <div className="header">
+        <div className="header-left">
+          <div className="header-icon">🌿</div>
+          <div>
+            <h1>Breathe ESG</h1>
+            <div className="header-subtitle">Analyst Dashboard</div>
+          </div>
+        </div>
+        <button className="btn-logout" onClick={function(){localStorage.removeItem('token');window.location.reload();}}>Sign Out</button>
+      </div>
+
+      <div className="stats-grid">
+        {[
+          ['Pending',stats.pending,'#d69e2e'],
+          ['Flagged',stats.flagged,'#e53e3e'],
+          ['Approved',stats.approved,'#38a169'],
+          ['Rejected',stats.rejected,'#718096'],
+          ['Approved CO₂e', stats.approved_co2e_kg != null ? (stats.approved_co2e_kg).toLocaleString()+' kg' : '0 kg','#2d6a4f'],
+          ['Scope 1 CO₂e', stats.scope1_co2e_kg != null ? (stats.scope1_co2e_kg).toLocaleString()+' kg' : '0 kg','#e53e3e'],
+          ['Scope 2 CO₂e', stats.scope2_co2e_kg != null ? (stats.scope2_co2e_kg).toLocaleString()+' kg' : '0 kg','#dd6b20'],
+          ['Scope 3 CO₂e', stats.scope3_co2e_kg != null ? (stats.scope3_co2e_kg).toLocaleString()+' kg' : '0 kg','#3182ce'],
+        ].map(function(item){ return (
+          <div key={item[0]} className="stat-card">
+            <div className="stat-number" style={{color:item[2]}}>{item[1] != null ? item[1] : '0'}</div>
+            <div className="stat-label">{item[0]}</div>
+          </div>
+        );})}
+      </div>
+
+      <div className="ingest-bar">
+        <strong>🔺 Ingest New Data</strong>
+        <select className="select-styled" value={sourceType} onChange={e=>setSourceType(e.target.value)}>
+          <option value="SAP">SAP — Fuel & Procurement</option>
+          <option value="UTILITY">Utility — Electricity</option>
+          <option value="TRAVEL">Corporate Travel</option>
+        </select>
+        <label className="file-label">
+          📎 {fileName || 'Choose file...'}
+          <input type="file" accept=".csv,.json,.txt" onChange={onFileChange} style={{display:'none'}}/>
+        </label>
+        <button className="btn-upload" onClick={upload} disabled={uploading||!file}>
+          {uploading ? '⏳ Uploading...' : '⬆ Upload & Ingest'}
+        </button>
+        {uploadMsg && <span className={uploadOk ? 'upload-success' : 'upload-error'}>{uploadOk ? '✓ ' : '✗ '}{uploadMsg}</span>}
+      </div>
+
+      <div className="filters-bar">
+        <span>Filter:</span>
+        <select className="select-styled" value={filters.scope} onChange={e=>applyFilter('scope',e.target.value)}>
+          <option value="">All Scopes</option>
+          <option value="1">Scope 1 — Direct</option>
+          <option value="2">Scope 2 — Electricity</option>
+          <option value="3">Scope 3 — Travel</option>
+        </select>
+        <select className="select-styled" value={filters.status} onChange={e=>applyFilter('status',e.target.value)}>
+          <option value="">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="FLAGGED">Flagged</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+        <select className="select-styled" value={filters.source_type} onChange={e=>applyFilter('source_type',e.target.value)}>
+          <option value="">All Sources</option>
+          <option value="SAP">SAP</option>
+          <option value="UTILITY">Utility</option>
+          <option value="TRAVEL">Travel</option>
+        </select>
+        <button className="select-styled" onClick={fetchData} style={{cursor:'pointer',background:'#2d6a4f',color:'white',border:'none'}}>↻ Refresh</button>
+      </div>
+
+      <div className="table-wrap">
+        <div className="table-container">
+          {loading ? (
+            <div className="loading"><div className="spinner"></div><p style={{marginTop:'1rem'}}>Loading records...</p></div>
+          ) : records.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📂</div>
+              <div className="empty-text">No records found</div>
+              <div className="empty-sub">Upload a SAP, Utility, or Travel file above to get started</div>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Scope</th>
+                  <th>Source</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th>Quantity</th>
+                  <th>CO₂e</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map(function(r){ return (
+                  <tr key={r.id}>
+                    <td><span className={'scope-badge ' + scopeClass[r.scope]}>S{r.scope}</span></td>
+                    <td style={{color:'#4a5568',fontWeight:500}}>{r.source_type}</td>
+                    <td style={{fontWeight:500}}>{r.category}</td>
+                    <td style={{color:'#718096'}}>{r.activity_date}</td>
+                    <td>{parseFloat(r.quantity).toLocaleString()} <span style={{color:'#a0aec0'}}>{r.unit}</span></td>
+                    <td style={{fontWeight:600,color:'#2d6a4f'}}>{r.co2e_kg ? parseFloat(r.co2e_kg).toFixed(2)+' kg' : '—'}</td>
+                    <td style={{color:'#718096'}}>{r.location||'—'}</td>
+                    <td>
+                      <span className={'status-badge status-'+r.status}>{r.status}</span>
+                      {r.flag_reason && <span className="flag-icon" title={r.flag_reason}>⚠</span>}
+                    </td>
+                    <td>
+                      <button className="action-btn btn-ok" onClick={function(){review(r.id,'APPROVED');}}>✓ OK</button>
+                      {' '}
+                      <button className="action-btn btn-flag" onClick={function(){review(r.id,'FLAGGED');}}>⚑ Flag</button>
+                      {' '}
+                      <button className="action-btn btn-rej" onClick={function(){review(r.id,'REJECTED');}}>✗ Rej</button>
+                    </td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [loggedIn, setLoggedIn] = React.useState(!!localStorage.getItem('token'));
+  return loggedIn ? <Dashboard/> : <Login onLogin={function(){setLoggedIn(true);}}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

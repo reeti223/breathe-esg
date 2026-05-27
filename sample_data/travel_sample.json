@@ -1,0 +1,12 @@
+[
+  {"type": "FLIGHT", "date": "2024-01-10", "origin": "DEL", "destination": "BOM", "vendor": "IndiGo", "location": "Mumbai"},
+  {"type": "FLIGHT", "date": "2024-01-15", "origin": "BOM", "destination": "LHR", "vendor": "Air India", "location": "London"},
+  {"type": "HOTEL", "date": "2024-01-15", "nights": 3, "hotel_name": "Marriott London", "location": "London", "vendor": "Marriott"},
+  {"type": "CAR", "date": "2024-01-18", "distance_km": 45, "vendor": "Uber", "location": "London"},
+  {"type": "FLIGHT", "date": "2024-02-05", "origin": "DEL", "destination": "BLR", "vendor": "SpiceJet", "location": "Bangalore"},
+  {"type": "HOTEL", "date": "2024-02-05", "nights": 2, "hotel_name": "ITC Gardenia", "location": "Bangalore", "vendor": "ITC Hotels"},
+  {"type": "RAIL", "date": "2024-02-08", "distance_km": 340, "route": "Bangalore to Chennai", "vendor": "Indian Railways"},
+  {"type": "FLIGHT", "date": "2024-03-12", "origin": "BOM", "destination": "DXB", "vendor": "Emirates", "location": "Dubai"},
+  {"type": "HOTEL", "date": "2024-03-12", "nights": 4, "hotel_name": "Hyatt Dubai", "location": "Dubai", "vendor": "Hyatt"},
+  {"type": "CAR", "date": "2024-03-16", "distance_km": 0, "vendor": "Careem", "location": "Dubai"}
+]
