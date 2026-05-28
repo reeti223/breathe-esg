@@ -1,106 +1,128 @@
-# Decisions — Breathe ESG Ingestion Platform
+# Architectural Decisions — Breathe ESG Ingestion Platform
 
 ## SAP Data Format
-**Decision:** Pipe-delimited flat file export (not IDoc, not OData)
+**Decision:** Pipe-delimited flat file export
 
-**Why:** SAP's most common bulk export for MM/FI modules is a
-flat file dump via transaction SE16 or MB51. IDocs are used for
-real-time integration between SAP systems — not for one-time
-data handoffs to third parties. OData would require standing up
-an API connection to the client's SAP system, which is a
-procurement and security conversation that takes weeks.
-A flat file is what a sustainability lead can actually get from
-their IT team in one day.
+**Rationale:** SAP's most practical bulk export for MM/FI modules is a flat file via
+transactions MB51 (material movements) or SE16 (table browser). IDocs are designed
+for real-time system-to-system integration, not one-time data handoffs. OData requires
+a formal API connection to the client's SAP landscape — a procurement and security
+process that takes weeks. A flat file is what a sustainability lead can actually
+obtain from their IT team within a day, making it the correct choice for a
+time-sensitive ESG audit cycle.
 
-**What I ignored:** IDoc XML format, BAPI calls, SAP BW exports.
-These are valid but require deeper SAP access than a new
-onboarding client would grant immediately.
+**Alternatives rejected:** IDoc XML (requires EDI infrastructure), BAPI calls
+(needs ABAP access), SAP BW extracts (requires BW licensing and separate project).
 
-**What I'd ask the PM:** Does the client have an IT contact who
-can run MB51 or SE16 exports on a schedule? Or are we relying
-on the sustainability lead to do manual exports?
+**Open question for PM:** Does the client have an IT contact who can schedule
+automated MB51 exports, or will the sustainability lead do manual exports each period?
+If the latter, we need to design the upload UX for non-technical users.
 
 ---
 
 ## Utility Data Format
 **Decision:** Portal CSV export
 
-**Why:** Most Indian utilities (Adani, BSES, BESCOM) offer a
-CSV download from their online portal. PDF bills are the other
-common format but require OCR which adds significant complexity
-and failure modes. API access exists for some utilities but
-requires formal agreements. CSV from the portal is what a
-facilities manager can actually produce tomorrow morning.
+**Rationale:** Major Indian utilities — Adani Electricity, BSES, BESCOM, MSEDCL —
+all offer CSV downloads from their customer portals. PDF bill parsing is the
+alternative, but it introduces OCR complexity, supplier-specific layout handling,
+and significant failure rates on scanned documents. API access (e.g., Urjanet
+aggregator) exists but requires formal data-sharing agreements. The CSV portal
+export is what a facilities manager can produce tomorrow morning with zero
+IT involvement.
 
-**What I ignored:** PDF parsing, utility API integrations,
-automated meter reading systems (AMR/AMI).
+**Alternatives rejected:** PDF parsing (brittle, requires OCR pipeline),
+utility APIs (requires formal agreements and onboarding), AMR/AMI direct feeds
+(only available for large industrial accounts).
 
-**What I'd ask the PM:** How many meters does this client have?
-If it's 100+ meters across sites, manual CSV downloads don't
-scale and we need to discuss API access or a data aggregator
-like Urjanet.
+**Open question for PM:** How many meters does this client have across sites?
+Manual CSV downloads don't scale past ~20 meters per period. If the client
+has 100+ meters, we need to discuss a data aggregator or automated portal scraping.
 
 ---
 
 ## Corporate Travel Format
-**Decision:** JSON export (Concur/Navan style)
+**Decision:** JSON export matching Concur/Navan schema
 
-**Why:** Concur's API returns JSON. Navan's export is JSON.
-Most corporate travel platforms offer JSON as their primary
-programmatic format. Unlike SAP, travel platforms are designed
-to be integrated with — their exports are clean and consistent.
+**Rationale:** Unlike SAP, corporate travel platforms are built for integration.
+Concur's Expense API returns JSON. Navan's export is JSON. The format is
+consistent, machine-readable, and requires no OCR or parsing heuristics.
+The ingestion pipeline maps known fields (origin, destination, travel_type,
+amount) to EmissionRecord fields with deterministic logic.
 
-**What I ignored:** Concur's SOAP API (legacy), expense report
-PDFs, manual spreadsheet entry.
+**Alternatives rejected:** Concur SOAP API (legacy, deprecated for new
+integrations), expense report PDFs (requires document parsing), manual
+spreadsheet entry (no audit trail, high error rate).
 
-**What I'd ask the PM:** Which platform does the client use —
-Concur, Navan, or something else? Concur has a formal API with
-OAuth; Navan has a simpler export. The JSON structure differs
-slightly between platforms.
+**Open question for PM:** Which platform does the client use — Concur, Navan,
+TravelPerk, or an in-house tool? The JSON field names differ slightly.
+Concur uses `ExpenseTypeCode`; Navan uses `category`. This affects the
+field mapping in the ingestor.
 
 ---
 
 ## Flight Distance Calculation
-**Decision:** Lookup table for common routes, 1500km default
+**Decision:** Lookup table for top routes, 1,500 km default for unknowns
 
-**Why:** Travel exports often give airport codes but not
-distances. Great-circle distance calculation requires a
-geocoding library. For a prototype, a lookup table of common
-Indian and international routes is sufficient. Unknown routes
-default to 1500km with a flag for analyst review.
+**Rationale:** Travel exports provide airport codes (IATA), not distances.
+Great-circle distance calculation requires either a geocoding API call per
+record or a local airport coordinate database. For a prototype, a lookup
+table covering the 50 most common Indian domestic and international routes
+handles the majority of records. Unknown routes are flagged as PENDING
+with a default of 1,500 km (median short-haul distance) for analyst review.
+This avoids API dependency while preserving correctness for common cases.
 
-**What I'd ask the PM:** Should we integrate a flight distance
-API like the Great Circle Mapper for production?
+**What production needs:** Integration with a flight distance API or
+the OpenFlights dataset for full IATA coverage, removing the default fallback.
 
 ---
 
 ## Authentication
-**Decision:** DRF Token Authentication
+**Decision:** Django REST Framework Token Authentication
 
-**Why:** Simple, stateless, works well for a React SPA calling
-a REST API. JWT would be better for production (token expiry,
-refresh tokens) but adds complexity that isn't justified for
-a 4-day prototype.
+**Rationale:** Token auth is stateless, works cleanly with a React SPA, and
+requires no cookie/session management. Each request carries the token in the
+Authorization header, which is simple to implement and debug. For a 4-day
+prototype, this is the correct level of complexity.
+
+**What production needs:** JWT with short-lived access tokens and refresh
+tokens (using SimpleJWT), token revocation on logout, and rate limiting
+on the auth endpoint.
 
 ---
 
 ## Database
-**Decision:** SQLite for development, designed for PostgreSQL
-in production
+**Decision:** SQLite in development, PostgreSQL-ready in production
 
-**Why:** SQLite requires zero setup and works identically to
-PostgreSQL for our query patterns. The settings are structured
-so switching to PostgreSQL for deployment requires only
-changing the DATABASE_URL environment variable.
+**Rationale:** SQLite requires zero infrastructure, runs identically to
+PostgreSQL for our query patterns (no full-text search, no JSON operators
+that diverge between engines), and makes local development and CI trivially
+simple. The settings module reads DATABASE_URL from the environment, so
+switching to a managed PostgreSQL instance on Render requires changing one
+environment variable and nothing else in the codebase.
 
 ---
 
-## What I would ask the PM
-1. How many meters / SAP plants / employees does this client have?
-2. Is the travel data from Concur or Navan specifically?
-3. Do they have a data engineer who can run scheduled exports
-   or is this all manual?
-4. What is the audit deadline — how much time do analysts have
-   to review before lock?
-5. Are emission factors client-specific or do we use standard
-   published factors?
+## Emission Factors
+**Decision:** Hardcoded published factors from DEFRA 2023 and CEA India 2023
+
+**Rationale:** Using published, versioned factors from a named authority
+(DEFRA, CEA) means every CO2e calculation is auditable and reproducible.
+Hardcoding them in a constants file makes the source explicit. The alternative
+— a database-driven factor table — is the right production design but adds
+schema complexity and a factor management UI that isn't justified for a prototype.
+
+**What production needs:** A FactorSet model with source, version, and
+effective_date fields, so factors can be updated without code changes
+and historical records retain the factor that was current at ingest time.
+
+---
+
+## Questions for PM / Client Discovery
+1. How many SAP plants / utility meters / employees does this client have?
+   (Determines whether manual upload or automated pulls are needed)
+2. Concur or Navan for travel? (Affects field mapping in the JSON ingestor)
+3. Do they have a data engineer, or is this all done by the sustainability lead?
+4. What is the audit lock date? (Determines the analyst review window)
+5. Are emission factors client-specific or do we use standard published factors?
+   Some clients have negotiated green tariffs that change their Scope 2 factor.
